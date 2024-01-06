@@ -73,6 +73,120 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-20240106-SPI" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2024/01/06/20240106-SPI/" class="article-date">
+  <time class="dt-published" datetime="2024-01-06T01:40:45.000Z" itemprop="datePublished">2024-01-06</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2024/01/06/20240106-SPI/">20240106 SPI</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h2 id="SPI总线原理"><a href="#SPI总线原理" class="headerlink" title="SPI总线原理"></a>SPI总线原理</h2><p>SPI是串行外设接口(Serial Peripheral Interface)的缩写，是一种高速、全双工、同步的通信总线。SPI是Motorola公司推出的一种同步串行接口技术，SPI由一个主设备和一个或多个从设备组成，在一次数据传输过程中，接口上只能有一个主机和一个从机通信。</p>
+<p>SPI总线的优点是操作简单、数据传输速率较高、全双工，缺点是只支持单个主机、没有指定的流控制、没有应答机制确认是否接收到数据。</p>
+<h3 id="接口信号定义"><a href="#接口信号定义" class="headerlink" title="接口信号定义"></a>接口信号定义</h3><p>SPI总线接口包括以下四种信号：</p>
+<ul>
+<li>MOSI（Master Output，Slave Input）：主器件数据输出，从器件数据输入。</li>
+<li>MISO（Master Input， Slave Output）：主器件数据输入，从器件数据输出。</li>
+<li>SCK（Serial Clock）：有时也称为SCLK，时钟信号，由主器件产生。</li>
+<li>CS（Chip select）：有时也称为SS，从器件使能信号，由主器件控制，<em><strong>实际使用时，经常用GPIO来代替。</strong></em>***</li>
+</ul>
+<p>SPI总线支持连接多个从机，如下图所示，SPI主机通过连接到从机的片选信号使能&#x2F;禁止从机，并且同时只能使能一个从机，因此总线里面有多少个从机，就需要多少个片选信号。当SPI主机需要和总线中某个从机进行通信时，主机会拉低对应的CS信号使能该从机，之后发起通信，通信完成后，拉高CS信号，解除总线的占用。</p>
+<p><img src="https://img-blog.csdnimg.cn/82ee17811b4e4dc9ad8d9b6fe1864872.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM2MTM5NzY4,size_16,color_FFFFFF,t_70#pic_center" alt="img"> 对于SPI总线，我们还需要深刻理解下面几个知识点。</p>
+<p>■ 硬件片选和软件片选的区别</p>
+<p>所谓硬件片选指的是SPI本身具有片选信号，当我们通过SPI发送数据时，SPI外设自动拉低CS信号使能从机，发送完成后自动拉高CS信号释放从机，这个过程是不需要软件操作的。而软件片选则是需要使用GPIO作为片选信号，SPI在发送数据之前，需要先通过软件设置作为片选信号的GPIO输出低电平，发送完成之后再设置该GPIO输出高电平。</p>
+<p>■ SPI总线是回环结构</p>
+<p>SPI是一个环形总线结构，如下图所示，主设备和从设备构成一个环形。在时钟SCK的作用下，主设备发送一个位到从设备，因为是环形结构，所以从设备必定会同时传送一个位到主设备。同样，主设备向从设备发送一个字节，从设备也必定会同时传送一个字节到主设备。理解了环形结构，就很容易理解下面几点：</p>
+<ul>
+<li>SPI是全双工，同步的通信总线。</li>
+<li><strong>主设备向从设备发送数据时，无论我们需不需要从设备返回数据，从设备都会返回数据。</strong></li>
+<li>主设备从从设备读取一个字节数据时，为什么需要写一个字节数据到从设备：因为是环形结构，不写数据过去，对方的数据就不会被移位过来。</li>
+</ul>
+<p> <img src="https://img-blog.csdnimg.cn/ab46442728b142f1b1573e7ab960cc59.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM2MTM5NzY4,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"> </p>
+<p>■ SPI主机和从机之间连接时信号不需要交叉</p>
+<p>SPI主机和从机连接时，MOSI和MISO信号是不需要交叉连接的，因为MOSI本身就表示了主机输出、从机输入，MISO表示主机输入、从机输出，因此不能交叉连接。</p>
+<p> <img src="https://img-blog.csdnimg.cn/baa84aedc64742f2864024f7fe81e825.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM2MTM5NzY4,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"> </p>
+<h3 id="SPI的4种工作模式"><a href="#SPI的4种工作模式" class="headerlink" title="SPI的4种工作模式"></a>SPI的4种工作模式</h3><p>SPI总线共有4种工作模式：模式0~模式3，这4种工作模式是由时钟相位和时钟极性确定的。</p>
+<ol>
+<li>时钟极性CPOL（Clock polarity）：SPI总线空闲时，时钟信号SCLK的电平称为时钟极性，有以下两种模式：<ul>
+<li>CPOL&#x3D;0：SPI总线空闲时，时钟信号为低电平。	CPOL&#x3D;1：SPI总线空闲时，时钟信号为高电平。</li>
+</ul>
+</li>
+<li>时钟相位CPHA（Clock phase）：SPI在时钟信号SCLK第几个边沿开始采样数据，有以下两种模式：<ul>
+<li>CPHA&#x3D;0：在第1个时钟边沿进行数据采样。</li>
+<li>CPHA&#x3D;1：在第2个时钟边沿进行数据采样。</li>
+</ul>
+</li>
+</ol>
+<p>时钟极性CPOL时钟相位CPHA各有2种模式，他们两两组合就形成了SPI的4种工作模式，如下表所示。</p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>SPI工作模式</th>
+<th>描述</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>模式0</td>
+<td>CPOL&#x3D;0，CPHA&#x3D;0</td>
+<td><strong>重要</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>模式1</td>
+<td>CPOL&#x3D;0，CPHA&#x3D;1</td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>模式2</td>
+<td>CPOL&#x3D;1，CPHA&#x3D;0</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>模式3</td>
+<td>CPOL&#x3D;1，CPHA&#x3D;1</td>
+<td><strong>重要</strong></td>
+</tr>
+</tbody></table>
+<p>​	SPI的4种模式中，最常用的是模式0和模式3。正是由于SPI有4种工作模式，因此当我们使用SPI总线时，需要去查询SPI总线中主机设备（如单片机）和从机设备（如SPI 存储器）的数据手册，确定他们支持什么模式，从而选择适合的工作模式。</p>
+<p>SPI的4种模式的时序图如下。</p>
+<p>■ 时钟相位CPHA&#x3D;0时的时序</p>
+<p><img src="https://img-blog.csdnimg.cn/a4b8a52e96574f2fb2b87efc1b88c6fb.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM2MTM5NzY4,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述">  	 ■ 时钟相位CPHA&#x3D;1时的时序 </p>
+<p> <img src="https://img-blog.csdnimg.cn/6816cc060d0045c7901628050fe0c038.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzM2MTM5NzY4,size_16,color_FFFFFF,t_70#pic_center" alt="在这里插入图片描述"> </p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2024/01/06/20240106-SPI/" data-id="clr1eft0o00004suxbvhwd9um" data-title="20240106 SPI" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+
+  
     <article id="post-20240106-F-RAM" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
     <a href="/2024/01/06/20240106-F-RAM/" class="article-date">
@@ -223,6 +337,10 @@
     <h3 class="widget-title">Recent Posts</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2024/01/06/20240106-SPI/">20240106 SPI</a>
+          </li>
         
           <li>
             <a href="/2024/01/06/20240106-F-RAM/">20240106 F-RAM</a>
